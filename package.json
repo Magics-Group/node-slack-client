@@ -14,7 +14,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/slackhq/node-slack-client.git"
+    "url": "git://github.com/Magics-Group/node-slack-client.git"
   },
   "bugs": {
     "url": "http://github.com/slackhq/node-slack-client/issues"
