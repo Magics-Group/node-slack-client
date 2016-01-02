@@ -1,4 +1,4 @@
-var Bot, Channel, Client, DM, EventEmitter, Group, HttpsProxyAgent, Log, Message, Team, User, WebSocket, https, querystring,
+var Bot, Channel, Client, DM, EventEmitter, Group, HttpsProxyAgent, Message, Team, User, WebSocket, https, querystring,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -8,8 +8,6 @@ https = require('https');
 querystring = require('querystring');
 
 WebSocket = require('ws');
-
-Log = require('log');
 
 EventEmitter = require('events').EventEmitter;
 
@@ -42,9 +40,6 @@ Client = (function(_super) {
     this._onSetStatus = __bind(this._onSetStatus, this);
     this._onSetActive = __bind(this._onSetActive, this);
     this._onSetPresence = __bind(this._onSetPresence, this);
-    this._onCreateGroup = __bind(this._onCreateGroup, this);
-    this._onOpenDM = __bind(this._onOpenDM, this);
-    this._onJoinChannel = __bind(this._onJoinChannel, this);
     this._onLogin = __bind(this._onLogin, this);
     this.authenticated = false;
     this.connected = false;
@@ -60,11 +55,9 @@ Client = (function(_super) {
     this._messageID = 0;
     this._pending = {};
     this._connAttempts = 0;
-    this.logger = new Log(process.env.SLACK_LOG_LEVEL || 'info');
   }
 
   Client.prototype.login = function() {
-    this.logger.info('Connecting...');
     return this._apiCall('rtm.start', {
       agent: 'node-slack'
     }, this._onLogin);
@@ -135,12 +128,10 @@ Client = (function(_super) {
             if (!_this.connected) {
               return;
             }
-            _this.logger.debug('ping');
             _this._send({
               "type": "ping"
             });
             if ((_this._lastPong != null) && Date.now() - _this._lastPong > 10000) {
-              _this.logger.error("Last pong is too old: %d", (Date.now() - _this._lastPong) / 1000);
               _this.authenticated = false;
               _this.connected = false;
               return _this.reconnect();
@@ -195,10 +186,8 @@ Client = (function(_super) {
     }
     this._connAttempts++;
     timeout = this._connAttempts * 1000;
-    this.logger.info("Reconnecting in %dms", timeout);
     return setTimeout((function(_this) {
       return function() {
-        _this.logger.info('Attempting reconnect');
         return _this.login();
       };
     })(this), timeout);
@@ -211,14 +200,9 @@ Client = (function(_super) {
     };
     return this._apiCall('channels.join', params, (function(_this) {
       return function() {
-        _this._onJoinChannel.apply(_this, arguments);
         return typeof callback === "function" ? callback.apply(null, arguments) : void 0;
       };
     })(this));
-  };
-
-  Client.prototype._onJoinChannel = function(data) {
-    return this.logger.debug(data);
   };
 
   Client.prototype.openDM = function(user_id, callback) {
@@ -228,14 +212,9 @@ Client = (function(_super) {
     };
     return this._apiCall('im.open', params, (function(_this) {
       return function() {
-        _this._onOpenDM.apply(_this, arguments);
         return typeof callback === "function" ? callback.apply(null, arguments) : void 0;
       };
     })(this));
-  };
-
-  Client.prototype._onOpenDM = function(data) {
-    return this.logger.debug(data);
   };
 
   Client.prototype.createGroup = function(name, callback) {
@@ -245,14 +224,9 @@ Client = (function(_super) {
     };
     return this._apiCall('groups.create', params, (function(_this) {
       return function() {
-        _this._onCreateGroup.apply(_this, arguments);
         return typeof callback === "function" ? callback.apply(null, arguments) : void 0;
       };
     })(this));
-  };
-
-  Client.prototype._onCreateGroup = function(data) {
-    return this.logger.debug(data);
   };
 
   Client.prototype.setPresence = function(presence, callback) {
@@ -271,9 +245,7 @@ Client = (function(_super) {
     })(this));
   };
 
-  Client.prototype._onSetPresence = function(data) {
-    return this.logger.debug(data);
-  };
+  Client.prototype._onSetPresence = function(data) {};
 
   Client.prototype.setActive = function(callback) {
     var params;
@@ -286,9 +258,7 @@ Client = (function(_super) {
     })(this));
   };
 
-  Client.prototype._onSetActive = function(data) {
-    return this.logger.debug(data);
-  };
+  Client.prototype._onSetActive = function(data) {};
 
   Client.prototype.setStatus = function(status, callback) {
     var params;
@@ -303,9 +273,7 @@ Client = (function(_super) {
     })(this));
   };
 
-  Client.prototype._onSetStatus = function(data) {
-    return this.logger.debug(data);
-  };
+  Client.prototype._onSetStatus = function(data) {};
 
   Client.prototype.getBotByID = function(id) {
     return this.bots[id];
@@ -463,7 +431,7 @@ Client = (function(_super) {
   };
 
   Client.prototype.onMessage = function(message) {
-    var channel, k, m, u, user, _ref, _results;
+    var channel, k, m, u, user, _results;
     this.emit('raw_message', message);
     switch (message.type) {
       case "hello":
@@ -495,7 +463,6 @@ Client = (function(_super) {
             return;
           }
         }
-        this.logger.debug(message);
         m = new Message(this, message);
         this.emit('message', m);
         channel = this.getChannelGroupOrDMByID(message.channel);
@@ -519,12 +486,6 @@ Client = (function(_super) {
         if (user && channel) {
           this.emit('userTyping', user, channel);
           return channel.startedTyping(user.id);
-        } else if (channel) {
-          return this.logger.error("Could not find user " + message.user + " for user_typing");
-        } else if (user) {
-          return this.logger.error("Could not find channel " + message.channel + " for user_typing");
-        } else {
-          return this.logger.error("Could not find channel/user " + message.channel + "/" + message.user + " for user_typing");
         }
         break;
       case "team_join":
@@ -627,11 +588,9 @@ Client = (function(_super) {
       default:
         if (message.reply_to) {
           if (message.type === 'pong') {
-            this.logger.debug('pong');
             this._lastPong = Date.now();
             return delete this._pending[message.reply_to];
           } else if (message.ok) {
-            this.logger.debug("Message " + message.reply_to + " was sent");
             if (this._pending[message.reply_to]) {
               m = this._pending[message.reply_to];
               m._onMessageSent(message);
@@ -644,11 +603,6 @@ Client = (function(_super) {
             }
           } else {
             return this.emit('error', message.error != null ? message.error : message);
-          }
-        } else {
-          if ((_ref = message.type) !== "file_created" && _ref !== "file_shared" && _ref !== "file_unshared" && _ref !== "file_comment" && _ref !== "file_public" && _ref !== "file_comment_edited" && _ref !== "file_comment_deleted" && _ref !== "file_change" && _ref !== "file_deleted" && _ref !== "star_added" && _ref !== "star_removed") {
-            this.logger.debug('Unknown message type: ' + message.type);
-            return this.logger.debug(message);
           }
         }
     }

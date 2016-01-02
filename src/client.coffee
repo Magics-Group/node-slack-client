@@ -1,7 +1,6 @@
 https       = require 'https'
 querystring = require 'querystring'
 WebSocket   = require 'ws'
-Log            = require 'log'
 {EventEmitter} = require 'events'
 
 User = require './user'
@@ -37,14 +36,12 @@ class Client extends EventEmitter
 
     @_connAttempts  = 0
 
-    @logger         = new Log process.env.SLACK_LOG_LEVEL or 'info'
 
   #
   # Logging in and connection management functions
   #
 
   login: ->
-    @logger.info 'Connecting...'
     @_apiCall 'rtm.start', {agent: 'node-slack'}, @_onLogin
 
   _onLogin: (data) =>
@@ -110,10 +107,8 @@ class Client extends EventEmitter
         @_pongTimeout = setInterval =>
           if not @connected then return
 
-          @logger.debug 'ping'
           @_send {"type": "ping"}
           if @_lastPong? and Date.now() - @_lastPong > 10000
-            @logger.error "Last pong is too old: %d", (Date.now() - @_lastPong) / 1000
             @authenticated = false
             @connected = false
             @reconnect()
@@ -163,9 +158,7 @@ class Client extends EventEmitter
     @_connAttempts++
     # TODO: Check max reconnecting attempts and/or set a ceiling on this timeout
     timeout = @_connAttempts * 1000
-    @logger.info "Reconnecting in %dms", timeout
     setTimeout =>
-      @logger.info 'Attempting reconnect'
       @login()
     , timeout
 
@@ -175,11 +168,8 @@ class Client extends EventEmitter
     }
 
     @_apiCall 'channels.join', params, =>
-      @_onJoinChannel arguments...
       callback? arguments...
 
-  _onJoinChannel: (data) =>
-    @logger.debug data
 
   openDM: (user_id, callback) ->
     params = {
@@ -187,11 +177,7 @@ class Client extends EventEmitter
     }
 
     @_apiCall 'im.open', params, =>
-      @_onOpenDM arguments...
       callback? arguments...
-
-  _onOpenDM: (data) =>
-    @logger.debug data
 
   createGroup: (name, callback) ->
     params = {
@@ -199,11 +185,7 @@ class Client extends EventEmitter
     }
 
     @_apiCall 'groups.create', params, =>
-      @_onCreateGroup arguments...
       callback? arguments...
-
-  _onCreateGroup: (data) =>
-    @logger.debug data
 
   setPresence: (presence, callback) ->
     if presence is not 'away' and presence is not 'active' then return null
@@ -217,7 +199,6 @@ class Client extends EventEmitter
       callback? arguments...
 
   _onSetPresence: (data) =>
-    @logger.debug data
 
   setActive: (callback) ->
     params = {}
@@ -227,7 +208,6 @@ class Client extends EventEmitter
       callback? arguments...
 
   _onSetActive: (data) =>
-    @logger.debug data
 
   setStatus: (status, callback) ->
     params = {
@@ -239,7 +219,6 @@ class Client extends EventEmitter
       callback arguments...
 
   _onSetStatus: (data) =>
-    @logger.debug data
 
   #
   # Utility functions
@@ -385,7 +364,6 @@ class Client extends EventEmitter
             return
 
         # find channel/group/dm and add it to history
-        @logger.debug message
         m = new Message @, message
         @emit 'message', m
 
@@ -409,12 +387,6 @@ class Client extends EventEmitter
         if user and channel
           @emit 'userTyping', user, channel
           channel.startedTyping(user.id)
-        else if channel
-          @logger.error "Could not find user "+message.user+" for user_typing"
-        else if user
-          @logger.error "Could not find channel "+message.channel+" for user_typing"
-        else
-          @logger.error "Could not find channel/user "+message.channel+"/"+message.user+" for user_typing"
 
       when "team_join", "user_change"
         u = message.user
@@ -508,11 +480,9 @@ class Client extends EventEmitter
       else
         if message.reply_to
           if message.type == 'pong'
-            @logger.debug 'pong'
             @_lastPong = Date.now()
             delete @_pending[message.reply_to]
           else if message.ok
-            @logger.debug "Message "+message.reply_to+" was sent"
             if @_pending[message.reply_to]
               m = @_pending[message.reply_to]
               m._onMessageSent(message)
@@ -525,10 +495,6 @@ class Client extends EventEmitter
           else
             @emit 'error', if message.error? then message.error else message
             # TODO: resend?
-        else
-          if message.type not in ["file_created", "file_shared", "file_unshared", "file_comment", "file_public", "file_comment_edited", "file_comment_deleted", "file_change", "file_deleted", "star_added", "star_removed"]
-            @logger.debug 'Unknown message type: '+message.type
-            @logger.debug message
 
   #
   # Private functions
