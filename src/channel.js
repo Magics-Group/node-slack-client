@@ -82,7 +82,6 @@ Channel = (function() {
         this._history[message.ts] = message;
         break;
       default:
-        this._client.logger.debug("Unknown message subtype: %s", message.subtype);
         this._history[message.ts] = message;
     }
     if (message.ts && !message.hidden && (this.latest != null) && (this.latest.ts != null) && message.ts > this.latest.ts) {
@@ -133,13 +132,11 @@ Channel = (function() {
     if (data.attachments) {
       params.attachments = JSON.stringify(data.attachments);
     }
-    this._client.logger.debug(data);
-    this._client.logger.debug(params);
     return this._client._apiCall("chat.postMessage", params, this._onPostMessage);
   };
 
   Channel.prototype._onPostMessage = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.sendMessage = function(message) {
@@ -169,7 +166,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onFetchHistory = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.mark = function(ts) {
@@ -189,7 +186,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onMark = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.leave = function() {
@@ -208,7 +205,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onLeave = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.setTopic = function(topic) {
@@ -228,7 +225,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onSetTopic = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.setPurpose = function(purpose) {
@@ -248,7 +245,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onSetPurpose = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.rename = function(name) {
@@ -268,7 +265,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onRename = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype.invite = function(user_id) {
@@ -288,7 +285,7 @@ Channel = (function() {
   };
 
   Channel.prototype._onInvite = function(data) {
-    return this._client.logger.debug(data);
+    return data
   };
 
   Channel.prototype._recalcUnreads = function() {
